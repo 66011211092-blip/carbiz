@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>👤 จัดการลูกค้า | CarBiz</title>
+    <style>
+        body {
+          font-family: "Segoe UI", sans-serif;
+          background: #f8f9fa;
+          margin: 0;
+          color: #333;
+        }
+        header {
+          background: #0d6efd;
+          color: white;
+          padding: 15px;
+          font-size: 22px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        header a {
+          color: white;
+          text-decoration: none;
+          background: rgba(255,255,255,0.2);
+          padding: 5px 12px;
+          border-radius: 6px;
+        }
+        main { padding: 30px; }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          background: white;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+          margin-top: 10px;
+        }
+        th, td {
+          padding: 10px;
+          border-bottom: 1px solid #ddd;
+          text-align: left;
+        }
+        th { background: #0d6efd; color: white; }
+        button {
+          border: none; background: #0d6efd; color: white;
+          padding: 6px 10px; border-radius: 5px; cursor: pointer;
+          margin: 2px;
+        }
+        button.delete { background: #dc3545; }
+        button.edit { background: #198754; }
+        form {
+          background: white;
+          padding: 20px;
+          border-radius: 8px;
+          margin-top: 20px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        input {
+          padding: 6px;
+          margin: 4px;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+        }
+        footer {
+          text-align: center;
+          color: #777;
+          margin-top: 40px;
+          padding: 10px;
+        }
+    </style>
+
+    <script>
+        const API_BASE = "http://localhost:8080";
+
+        async function apiFetch(endpoint, options = {}) {
+          const res = await fetch(`${API_BASE}${endpoint}`, {
+            headers: { "Content-Type": "application/json" },
+            ...options
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return await res.json();
+        }
+
+        async function loadCustomers() {
+          const tbody = document.querySelector("#customerTable tbody");
+          tbody.innerHTML = "<tr><td colspan='8'>⏳ กำลังโหลดข้อมูล...</td></tr>";
+          try {
+            const customers = await apiFetch("/api/customers");
+            if (customers.length === 0) {
+              tbody.innerHTML = "<tr><td colspan='8'>ไม่มีข้อมูลลูกค้า</td></tr>";
+              return;
+            }
+            tbody.innerHTML = "";
+            customers.forEach(c => {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+                <td>${c.id}</td>
+                <td>${c.firstName}</td>
+                <td>${c.lastName}</td>
+                <td>${c.phone || '-'}</td>
+                <td>${c.email || '-'}</td>
+                <td>${c.nationalId || '-'}</td>
+                <td>${c.address || '-'}</td>
+                <td>
+                  <button class="edit" onclick="editCustomer(${c.id}, '${c.firstName}', '${c.lastName}', '${c.phone || ''}', '${c.email || ''}', '${c.nationalId || ''}', '${c.address || ''}')">แก้ไข</button>
+                  <button class="delete" onclick="deleteCustomer(${c.id})">ลบ</button>
+                </td>`;
+              tbody.appendChild(tr);
+            });
+          } catch (err) {
+            tbody.innerHTML = "<tr><td colspan='8' style='color:red;'>❌ ไม่สามารถเชื่อมต่อ API ได้</td></tr>";
+            console.error(err);
+          }
+        }
+
+        async function addCustomer(event) {
+          event.preventDefault();
+          const form = event.target;
+          const data = {
+            firstName: form.firstName.value,
+            lastName: form.lastName.value,
+            phone: form.phone.value,
+            email: form.email.value,
+            nationalId: form.nationalId.value,
+            address: form.address.value
+          };
+          try {
+            await apiFetch("/api/customers", {
+              method: "POST",
+              body: JSON.stringify(data)
+            });
+            alert("✅ เพิ่มลูกค้าสำเร็จ");
+            form.reset();
+            loadCustomers();
+          } catch (err) {
+            alert("❌ เพิ่มลูกค้าไม่สำเร็จ");
+            console.error(err);
+          }
+        }
+
+        async function deleteCustomer(id) {
+          if (!confirm("คุณต้องการลบลูกค้าคนนี้หรือไม่?")) return;
+          try {
+            await fetch(`${API_BASE}/api/customers/${id}`, { method: "DELETE" });
+            alert("🗑️ ลบข้อมูลเรียบร้อย");
+            loadCustomers();
+          } catch (err) {
+            alert("❌ ลบไม่สำเร็จ");
+            console.error(err);
+          }
+        }
+
+        function editCustomer(id, firstName, lastName, phone, email, nationalId, address) {
+          const form = document.getElementById("customerForm");
+          form.customerId.value = id;
+          form.firstName.value = firstName;
+          form.lastName.value = lastName;
+          form.phone.value = phone;
+          form.email.value = email;
+          form.nationalId.value = nationalId;
+          form.address.value = address;
+          form.querySelector("button[type='submit']").innerText = "💾 บันทึกการแก้ไข";
+        }
+
+        async function saveCustomerEdit(event) {
+          event.preventDefault();
+          const form = event.target;
+          const id = form.customerId.value;
+          const data = {
+            firstName: form.firstName.value,
+            lastName: form.lastName.value,
+            phone: form.phone.value,
+            email: form.email.value,
+            nationalId: form.nationalId.value,
+            address: form.address.value
+          };
+          try {
+            await apiFetch(`/api/customers/${id}`, {
+              method: "PUT",
+              body: JSON.stringify(data)
+            });
+            alert("✅ แก้ไขข้อมูลสำเร็จ");
+            form.reset();
+            form.querySelector("button[type='submit']").innerText = "➕ เพิ่มลูกค้าใหม่";
+            loadCustomers();
+          } catch (err) {
+            alert("❌ แก้ไขไม่สำเร็จ");
+            console.error(err);
+          }
+        }
+
+        window.addEventListener("DOMContentLoaded", loadCustomers);
+    </script>
+</head>
+
+<body>
+<header>
+    <div>👤 จัดการลูกค้า</div>
+    <a href="index.html">← กลับหน้า Dashboard</a>
+</header>
+
+<main>
+    <h2>รายชื่อลูกค้าทั้งหมด</h2>
+    <table id="customerTable">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>ชื่อ</th>
+            <th>นามสกุล</th>
+            <th>เบอร์โทร</th>
+            <th>อีเมล</th>
+            <th>บัตรประชาชน</th>
+            <th>ที่อยู่</th>
+            <th>จัดการ</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h3>➕ เพิ่ม / แก้ไข ลูกค้า</h3>
+    <form id="customerForm" onsubmit="event.target.customerId.value ? saveCustomerEdit(event) : addCustomer(event)">
+        <input type="hidden" name="customerId">
+        <input type="text" name="firstName" placeholder="ชื่อ" required>
+        <input type="text" name="lastName" placeholder="นามสกุล" required><br>
+        <input type="text" name="phone" placeholder="เบอร์โทร">
+        <input type="email" name="email" placeholder="อีเมล"><br>
+        <input type="text" name="nationalId" placeholder="เลขบัตรประชาชน">
+        <input type="text" name="address" placeholder="ที่อยู่"><br>
+        <button type="submit">➕ เพิ่มลูกค้าใหม่</button>
+    </form>
+</main>
+
+<footer>© 2025 CarBiz Management System</footer>
+</body>
+</html>

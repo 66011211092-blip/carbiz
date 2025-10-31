@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>💰 การขายรถ | CarBiz</title>
+    <style>
+        body {
+          font-family: "Segoe UI", sans-serif;
+          background: #f8f9fa;
+          margin: 0;
+          padding: 0;
+        }
+        header {
+          background: #0d6efd;
+          color: white;
+          padding: 15px;
+          font-size: 22px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        header a {
+          color: white;
+          text-decoration: none;
+          background: rgba(255,255,255,0.2);
+          padding: 5px 12px;
+          border-radius: 6px;
+        }
+        main { padding: 30px; }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 15px;
+          background: white;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        th, td {
+          padding: 10px;
+          border-bottom: 1px solid #ddd;
+          text-align: left;
+        }
+        th { background: #0d6efd; color: white; }
+        button {
+          border: none; background: #0d6efd; color: white;
+          padding: 6px 10px; border-radius: 5px; cursor: pointer; margin: 2px;
+        }
+        button.delete { background: #dc3545; }
+        form {
+          margin-top: 25px;
+          background: white;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        input, select {
+          padding: 6px;
+          margin: 4px;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+        }
+        footer { margin-top: 40px; color: #777; text-align: center; }
+    </style>
+
+    <script>
+        const API_BASE = "http://localhost:8080";
+
+        async function apiFetch(endpoint, options = {}) {
+          const res = await fetch(`${API_BASE}${endpoint}`, {
+            headers: { "Content-Type": "application/json" },
+            ...options
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return await res.json();
+        }
+
+        async function loadSales() {
+          const tbody = document.querySelector("#saleTable tbody");
+          tbody.innerHTML = "<tr><td colspan='7'>กำลังโหลด...</td></tr>";
+          try {
+            const sales = await apiFetch("/api/sales");
+            if (sales.length === 0) {
+              tbody.innerHTML = "<tr><td colspan='7'>ยังไม่มีรายการขาย</td></tr>";
+              return;
+            }
+            tbody.innerHTML = "";
+            sales.forEach(s => {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+                <td>${s.id}</td>
+                <td>${s.car?.brand || '-'} ${s.car?.model || '-'}</td>
+                <td>${s.customerName || '-'}</td>
+                <td>${s.customerPhone || '-'}</td>
+                <td>${s.finalPrice || '-'} บาท</td>
+                <td>${s.paymentMethod || '-'}</td>
+                <td>${s.saleDate || '-'}</td>
+              `;
+              tbody.appendChild(tr);
+            });
+          } catch (err) {
+            console.error(err);
+            tbody.innerHTML = "<tr><td colspan='7' style='color:red;'>❌ ไม่สามารถเชื่อมต่อ API ได้</td></tr>";
+          }
+        }
+
+        async function addSale(event) {
+          event.preventDefault();
+          const form = event.target;
+          const data = {
+            carId: parseInt(form.carId.value),
+            customerId: parseInt(form.customerId.value),
+            finalPrice: parseFloat(form.finalPrice.value),
+            paymentMethod: form.paymentMethod.value,
+            saleDate: form.saleDate.value
+          };
+          try {
+            await apiFetch("/api/sales", {
+              method: "POST",
+              body: JSON.stringify(data)
+            });
+            alert("✅ เพิ่มรายการขายสำเร็จ");
+            form.reset();
+            loadSales();
+            loadCarsForDropdown(); // รีเฟรช dropdown เพราะรถขายไปแล้ว
+          } catch (err) {
+            alert("❌ เพิ่มรายการขายไม่สำเร็จ");
+            console.error(err);
+          }
+        }
+
+        async function loadCarsForDropdown() {
+          const select = document.getElementById("carId");
+          select.innerHTML = "<option value=''>-- เลือกรถที่ยังไม่ขาย --</option>";
+          try {
+            const cars = await apiFetch("/api/cars");
+            cars
+              .filter(c => c.status === "AVAILABLE")
+              .forEach(c => {
+                const opt = document.createElement("option");
+                opt.value = c.id;
+                opt.textContent = `${c.brand} ${c.model} (${c.licensePlate || "-"})`;
+                select.appendChild(opt);
+              });
+          } catch (err) {
+            console.error("โหลดรถไม่สำเร็จ", err);
+          }
+        }
+
+        async function loadCustomersForDropdown() {
+          const select = document.getElementById("customerId");
+          select.innerHTML = "<option value=''>-- เลือกลูกค้า --</option>";
+          try {
+            const customers = await apiFetch("/api/customers");
+            customers.forEach(c => {
+              const opt = document.createElement("option");
+              opt.value = c.id;
+              opt.textContent = `${c.firstName} ${c.lastName}`;
+              select.appendChild(opt);
+            });
+          } catch (err) {
+            console.error("โหลดลูกค้าไม่สำเร็จ", err);
+          }
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+          loadSales();
+          loadCarsForDropdown();
+          loadCustomersForDropdown();
+        });
+    </script>
+</head>
+
+<body>
+<header>
+    <div>💰 การขายรถ</div>
+    <a href="index.html">← กลับหน้า Dashboard</a>
+</header>
+
+<main>
+    <h2>รายการขายทั้งหมด</h2>
+    <table id="saleTable">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>รถ</th>
+            <th>ลูกค้า</th>
+            <th>เบอร์โทร</th>
+            <th>ราคาขาย</th>
+            <th>ช่องทางชำระเงิน</th>
+            <th>วันที่ขาย</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h3>➕ เพิ่มรายการขายใหม่</h3>
+    <form onsubmit="addSale(event)">
+        <label>เลือกรถ:</label>
+        <select id="carId" name="carId" required></select><br>
+
+        <label>เลือกลูกค้า:</label>
+        <select id="customerId" name="customerId" required></select><br>
+
+        <input type="number" name="finalPrice" placeholder="ราคาขาย (บาท)" required>
+        <select name="paymentMethod" required>
+            <option value="">-- ช่องทางชำระเงิน --</option>
+            <option value="CASH">เงินสด</option>
+            <option value="TRANSFER">โอน</option>
+            <option value="INSTALLMENT">ผ่อนชำระ</option>
+        </select>
+        <input type="date" name="saleDate" required>
+        <button type="submit">บันทึก</button>
+    </form>
+</main>
+
+<footer>© 2025 CarBiz Management System</footer>
+</body>
+</html>

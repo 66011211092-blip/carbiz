@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>🔧 จัดการการซ่อมบำรุง | CarBiz</title>
+    <style>
+        body {
+          font-family: "Segoe UI", sans-serif;
+          background: #f8f9fa;
+          margin: 0;
+          color: #333;
+        }
+        header {
+          background: #0d6efd;
+          color: white;
+          padding: 15px;
+          font-size: 22px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        header a {
+          color: white;
+          text-decoration: none;
+          background: rgba(255,255,255,0.2);
+          padding: 5px 12px;
+          border-radius: 6px;
+        }
+        main { padding: 30px; }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          background: white;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+          margin-top: 10px;
+        }
+        th, td {
+          padding: 10px;
+          border-bottom: 1px solid #ddd;
+          text-align: left;
+        }
+        th { background: #0d6efd; color: white; }
+        button {
+          border: none; background: #0d6efd; color: white;
+          padding: 6px 10px; border-radius: 5px; cursor: pointer;
+          margin: 2px;
+        }
+        button.delete { background: #dc3545; }
+        form {
+          background: white;
+          padding: 20px;
+          border-radius: 8px;
+          margin-top: 20px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        input, textarea {
+          padding: 6px;
+          margin: 4px;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+          width: calc(100% - 20px);
+        }
+        label {
+          font-weight: bold;
+        }
+        footer {
+          text-align: center;
+          color: #777;
+          margin-top: 40px;
+          padding: 10px;
+        }
+    </style>
+
+    <script>
+        const API_BASE = "http://localhost:8080";
+
+        async function apiFetch(endpoint, options = {}) {
+          const res = await fetch(`${API_BASE}${endpoint}`, {
+            headers: { "Content-Type": "application/json" },
+            ...options
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return await res.json();
+        }
+
+        async function loadMaintenance() {
+          const carId = document.getElementById("carIdInput").value.trim();
+          const tbody = document.querySelector("#maintTable tbody");
+          if (!carId) {
+            tbody.innerHTML = "<tr><td colspan='5'>⚠️ กรุณากรอกรหัสรถก่อน</td></tr>";
+            return;
+          }
+
+          tbody.innerHTML = "<tr><td colspan='5'>⏳ กำลังโหลดข้อมูล...</td></tr>";
+          try {
+            const data = await apiFetch(`/api/maintenance/car/${carId}`);
+            if (data.length === 0) {
+              tbody.innerHTML = "<tr><td colspan='5'>ไม่มีข้อมูลการซ่อมของรถคันนี้</td></tr>";
+              return;
+            }
+            tbody.innerHTML = "";
+            data.forEach(m => {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+                <td>${m.id}</td>
+                <td>${m.detail}</td>
+                <td>${m.date}</td>
+                <td>${m.cost} บาท</td>
+                <td><button class="delete" onclick="deleteMaintenance(${m.id}, ${carId})">ลบ</button></td>`;
+              tbody.appendChild(tr);
+            });
+          } catch (err) {
+            tbody.innerHTML = "<tr><td colspan='5' style='color:red;'>❌ ไม่สามารถเชื่อมต่อ API ได้</td></tr>";
+            console.error(err);
+          }
+        }
+
+        async function addMaintenance(event) {
+          event.preventDefault();
+          const carId = document.getElementById("carIdInput").value.trim();
+          const form = event.target;
+
+          if (!carId) {
+            alert("⚠️ กรุณากรอกรหัสรถก่อนเพิ่มข้อมูล");
+            return;
+          }
+
+          const data = {
+            carId: parseInt(carId),
+            detail: form.detail.value,
+            date: form.date.value,
+            cost: parseFloat(form.cost.value)
+          };
+
+          try {
+            await apiFetch("/api/maintenance", {
+              method: "POST",
+              body: JSON.stringify(data)
+            });
+            alert("✅ เพิ่มข้อมูลการซ่อมสำเร็จ");
+            form.reset();
+            loadMaintenance();
+          } catch (err) {
+            alert("❌ เพิ่มข้อมูลไม่สำเร็จ");
+            console.error(err);
+          }
+        }
+
+        async function deleteMaintenance(id, carId) {
+          if (!confirm("ต้องการลบข้อมูลการซ่อมนี้หรือไม่?")) return;
+          try {
+            await fetch(`${API_BASE}/api/maintenance/${id}`, { method: "DELETE" });
+            alert("🗑️ ลบข้อมูลเรียบร้อย");
+            loadMaintenance();
+          } catch (err) {
+            alert("❌ ลบข้อมูลไม่สำเร็จ");
+            console.error(err);
+          }
+        }
+    </script>
+</head>
+
+<body>
+<header>
+    <div>🔧 การซ่อมบำรุง</div>
+    <a href="index.html">← กลับหน้า Dashboard</a>
+</header>
+
+<main>
+    <h2>ค้นหาการซ่อมตามรถ</h2>
+    <input type="number" id="carIdInput" placeholder="กรอกรหัสรถ (Car ID)">
+    <button onclick="loadMaintenance()">ค้นหา</button>
+
+    <table id="maintTable">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>รายละเอียด</th>
+            <th>วันที่ซ่อม</th>
+            <th>ค่าใช้จ่าย</th>
+            <th>จัดการ</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h3>➕ เพิ่มข้อมูลการซ่อม</h3>
+    <form onsubmit="addMaintenance(event)">
+        <label>รายละเอียดการซ่อม:</label><br>
+        <textarea name="detail" rows="3" placeholder="รายละเอียด..." required></textarea><br>
+
+        <label>วันที่ซ่อม:</label><br>
+        <input type="date" name="date" required><br>
+
+        <label>ค่าใช้จ่าย (บาท):</label><br>
+        <input type="number" name="cost" step="0.01" required><br>
+
+        <button type="submit">บันทึกการซ่อม</button>
+    </form>
+</main>
+
+<footer>© 2025 CarBiz Management System</footer>
+</body>
+</html>

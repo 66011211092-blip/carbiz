@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>🚘 จัดการรถ | CarBiz</title>
+    <style>
+        body {
+          font-family: "Segoe UI", sans-serif;
+          background: #f8f9fa;
+          margin: 0;
+          color: #333;
+        }
+        header {
+          background: #0d6efd;
+          color: white;
+          padding: 15px;
+          font-size: 22px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        header a {
+          color: white;
+          text-decoration: none;
+          background: rgba(255,255,255,0.2);
+          padding: 5px 12px;
+          border-radius: 6px;
+        }
+        main { padding: 30px; }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          background: white;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+          margin-top: 10px;
+        }
+        th, td {
+          padding: 10px;
+          border-bottom: 1px solid #ddd;
+          text-align: left;
+        }
+        th { background: #0d6efd; color: white; }
+        button {
+          border: none; background: #0d6efd; color: white;
+          padding: 6px 10px; border-radius: 5px; cursor: pointer;
+          margin: 2px;
+        }
+        button.delete { background: #dc3545; }
+        button.edit { background: #198754; }
+        form {
+          background: white;
+          padding: 20px;
+          border-radius: 8px;
+          margin-top: 20px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        input, select {
+          padding: 6px;
+          margin: 4px;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+        }
+        footer {
+          text-align: center;
+          color: #777;
+          margin-top: 40px;
+          padding: 10px;
+        }
+    </style>
+
+    <script>
+        const API_BASE = "http://localhost:8080";
+
+        async function apiFetch(endpoint, options = {}) {
+          const res = await fetch(`${API_BASE}${endpoint}`, {
+            headers: { "Content-Type": "application/json" },
+            ...options
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return await res.json();
+        }
+
+        async function loadCars() {
+          const tbody = document.querySelector("#carTable tbody");
+          tbody.innerHTML = "<tr><td colspan='9'>⏳ กำลังโหลดข้อมูล...</td></tr>";
+          try {
+            const data = await apiFetch("/api/cars");
+            if (data.length === 0) {
+              tbody.innerHTML = "<tr><td colspan='9'>ไม่มีข้อมูลรถ</td></tr>";
+              return;
+            }
+            tbody.innerHTML = "";
+            data.forEach(car => {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+                <td>${car.id}</td>
+                <td>${car.brand}</td>
+                <td>${car.model || '-'}</td>
+                <td>${car.year || '-'}</td>
+                <td>${car.licensePlate || '-'}</td>
+                <td>${car.status}</td>
+                <td>${car.purchasePrice || '-'}</td>
+                <td>${car.salePrice || '-'}</td>
+                <td>
+                  <button class="edit" onclick="editCar(${car.id}, '${car.brand}', '${car.model || ''}', '${car.year || ''}', '${car.licensePlate || ''}', '${car.status}', '${car.purchasePrice || ''}', '${car.salePrice || ''}')">แก้ไข</button>
+                  <button class="delete" onclick="deleteCar(${car.id})">ลบ</button>
+                </td>`;
+              tbody.appendChild(tr);
+            });
+          } catch (err) {
+            tbody.innerHTML = "<tr><td colspan='9' style='color:red;'>❌ ไม่สามารถเชื่อมต่อ API ได้</td></tr>";
+            console.error(err);
+          }
+        }
+
+        async function addCar(event) {
+          event.preventDefault();
+          const form = event.target;
+          const data = {
+            brand: form.brand.value,
+            model: form.model.value,
+            year: parseInt(form.year.value),
+            licensePlate: form.licensePlate.value,
+            status: form.status.value,
+            purchasePrice: parseFloat(form.purchasePrice.value),
+            salePrice: parseFloat(form.salePrice.value)
+          };
+          try {
+            await apiFetch("/api/cars", {
+              method: "POST",
+              body: JSON.stringify(data)
+            });
+            alert("✅ เพิ่มรถสำเร็จ");
+            form.reset();
+            loadCars();
+          } catch (err) {
+            alert("❌ เพิ่มรถไม่สำเร็จ");
+            console.error(err);
+          }
+        }
+
+        async function deleteCar(id) {
+          if (!confirm("ต้องการลบรถคันนี้หรือไม่?")) return;
+          try {
+            await fetch(`${API_BASE}/api/cars/${id}`, { method: "DELETE" });
+            alert("🗑️ ลบข้อมูลเรียบร้อย");
+            loadCars();
+          } catch (err) {
+            alert("❌ ลบไม่สำเร็จ");
+            console.error(err);
+          }
+        }
+
+        function editCar(id, brand, model, year, licensePlate, status, purchasePrice, salePrice) {
+          const form = document.getElementById("carForm");
+          form.carId.value = id;
+          form.brand.value = brand;
+          form.model.value = model;
+          form.year.value = year;
+          form.licensePlate.value = licensePlate;
+          form.status.value = status;
+          form.purchasePrice.value = purchasePrice;
+          form.salePrice.value = salePrice;
+          form.querySelector("button[type='submit']").innerText = "💾 บันทึกการแก้ไข";
+        }
+
+        async function saveCarEdit(event) {
+          event.preventDefault();
+          const form = event.target;
+          const id = form.carId.value;
+          const data = {
+            brand: form.brand.value,
+            model: form.model.value,
+            year: parseInt(form.year.value),
+            licensePlate: form.licensePlate.value,
+            status: form.status.value,
+            purchasePrice: parseFloat(form.purchasePrice.value),
+            salePrice: parseFloat(form.salePrice.value)
+          };
+          try {
+            await apiFetch(`/api/cars/${id}/status`, {
+              method: "PATCH",
+              body: JSON.stringify({ status: data.status })
+            });
+            alert("✅ แก้ไขข้อมูลสำเร็จ");
+            form.reset();
+            form.querySelector("button[type='submit']").innerText = "➕ เพิ่มรถใหม่";
+            loadCars();
+          } catch (err) {
+            alert("❌ แก้ไขไม่สำเร็จ");
+            console.error(err);
+          }
+        }
+
+        window.addEventListener("DOMContentLoaded", loadCars);
+    </script>
+</head>
+
+<body>
+<header>
+    <div>🚘 จัดการรถ</div>
+    <a href="index.html">← กลับหน้า Dashboard</a>
+</header>
+
+<main>
+    <h2>รายการรถทั้งหมด</h2>
+    <table id="carTable">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>ยี่ห้อ</th>
+            <th>รุ่น</th>
+            <th>ปี</th>
+            <th>ทะเบียน</th>
+            <th>สถานะ</th>
+            <th>ราคาซื้อ</th>
+            <th>ราคาขาย</th>
+            <th>จัดการ</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h3>➕ เพิ่ม / แก้ไข รถ</h3>
+    <form id="carForm" onsubmit="event.target.carId.value ? saveCarEdit(event) : addCar(event)">
+        <input type="hidden" name="carId">
+        <input type="text" name="brand" placeholder="ยี่ห้อ" required>
+        <input type="text" name="model" placeholder="รุ่น">
+        <input type="number" name="year" placeholder="ปี">
+        <input type="text" name="licensePlate" placeholder="ทะเบียนรถ"><br>
+        <select name="status" required>
+            <option value="AVAILABLE">AVAILABLE</option>
+            <option value="SOLD">SOLD</option>
+            <option value="MAINTENANCE">MAINTENANCE</option>
+        </select>
+        <input type="number" name="purchasePrice" placeholder="ราคาซื้อ" step="0.01">
+        <input type="number" name="salePrice" placeholder="ราคาขาย" step="0.01"><br>
+        <button type="submit">➕ เพิ่มรถใหม่</button>
+    </form>
+</main>
+
+<footer>© 2025 CarBiz Management System</footer>
+</body>
+</html>

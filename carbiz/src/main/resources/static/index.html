@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>🏠 CarBiz Dashboard</title>
+    <style>
+        body {
+          font-family: "Segoe UI", sans-serif;
+          background: #f8f9fa;
+          margin: 0;
+          color: #333;
+        }
+        header {
+          background: #0d6efd;
+          color: white;
+          padding: 20px 40px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        header h1 {
+          margin: 0;
+          font-size: 26px;
+        }
+        main {
+          padding: 40px;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 25px;
+        }
+        .card {
+          background: white;
+          border-radius: 12px;
+          padding: 30px 20px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          text-align: center;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+          cursor: pointer;
+        }
+        .card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+        }
+        .icon {
+          font-size: 42px;
+          margin-bottom: 10px;
+        }
+        .car { color: #0d6efd; }
+        .customer { color: #198754; }
+        .maint { color: #fd7e14; }
+        .sales { color: #6f42c1; }
+        .report { color: #dc3545; }
+        footer {
+          text-align: center;
+          color: #777;
+          padding: 20px;
+          margin-top: 30px;
+          border-top: 1px solid #ddd;
+        }
+        a {
+          text-decoration: none;
+          color: inherit;
+        }
+        button {
+          background: #0d6efd;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: background 0.2s ease;
+        }
+        button:hover {
+          background: #0b5ed7;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>🚗 CarBiz Management System</h1>
+    <button onclick="location.reload()">รีเฟรช</button>
+</header>
+
+<main>
+    <a href="cars.html">
+        <div class="card">
+            <div class="icon car">🚘</div>
+            <h3>จัดการรถ</h3>
+            <p>เพิ่ม / ลบ / แก้ไขสถานะรถ</p>
+        </div>
+    </a>
+
+    <a href="customers.html">
+        <div class="card">
+            <div class="icon customer">👤</div>
+            <h3>จัดการลูกค้า</h3>
+            <p>เพิ่ม / แก้ไข / ลบข้อมูลลูกค้า</p>
+        </div>
+    </a>
+
+    <a href="maintenance.html">
+        <div class="card">
+            <div class="icon maint">🔧</div>
+            <h3>บันทึกการซ่อมบำรุง</h3>
+            <p>ดูประวัติการซ่อมและเพิ่มข้อมูลใหม่</p>
+        </div>
+    </a>
+
+    <a href="sales.html">
+        <div class="card">
+            <div class="icon sales">💰</div>
+            <h3>จัดการการขาย</h3>
+            <p>สร้างดีลใหม่และดูรายการขายทั้งหมด</p>
+        </div>
+    </a>
+
+    <a href="reports.html">
+        <div class="card">
+            <div class="icon report">📊</div>
+            <h3>รายงานยอดขาย</h3>
+            <p>ดูสรุปยอดขาย รายได้ และกำไร</p>
+        </div>
+    </a>
+</main>
+
+<footer>
+    © 2025 CarBiz System — Developed by Sukrit Tutheenon
+</footer>
+</body>
+</html>

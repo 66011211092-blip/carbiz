@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>📊 รายงานยอดขาย | CarBiz</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+          font-family: "Segoe UI", sans-serif;
+          background: #f8f9fa;
+          margin: 0;
+          padding: 0;
+        }
+        header {
+          background: #0d6efd;
+          color: white;
+          padding: 15px;
+          font-size: 22px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        header a {
+          color: white;
+          text-decoration: none;
+          background: rgba(255,255,255,0.2);
+          padding: 5px 12px;
+          border-radius: 6px;
+        }
+        main { padding: 30px; }
+        .card {
+          background: white;
+          padding: 15px;
+          border-radius: 10px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+          margin-bottom: 20px;
+        }
+        .summary {
+          display: flex;
+          gap: 20px;
+          flex-wrap: wrap;
+        }
+        .summary .card {
+          flex: 1;
+          min-width: 200px;
+          text-align: center;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 15px;
+          background: white;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #0d6efd; color: white; }
+        footer { margin-top: 40px; color: #777; text-align: center; }
+    </style>
+
+    <script>
+        const API_BASE = "http://localhost:8080";
+
+        async function apiFetch(endpoint, options = {}) {
+          const res = await fetch(`${API_BASE}${endpoint}`, {
+            headers: { "Content-Type": "application/json" },
+            ...options
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return await res.json();
+        }
+
+        async function loadOverview() {
+          try {
+            const data = await apiFetch("/api/reports/overview");
+            document.getElementById("totalDeals").innerText = data.deals;
+            document.getElementById("totalRevenue").innerText = data.revenue.toLocaleString() + " บาท";
+            document.getElementById("totalProfit").innerText = data.profit.toLocaleString() + " บาท";
+          } catch (err) {
+            console.error("โหลด overview ไม่สำเร็จ", err);
+          }
+        }
+
+        async function loadMonthlyChart() {
+          try {
+            const data = await apiFetch("/api/reports/monthly");
+            const labels = data.map(d => `${d.month}/${d.year}`);
+            const revenue = data.map(d => d.revenue);
+            const profit = data.map(d => d.profit);
+
+            new Chart(document.getElementById("monthlyChart"), {
+              type: "bar",
+              data: {
+                labels,
+                datasets: [
+                  { label: "รายได้", data: revenue, backgroundColor: "#0d6efd" },
+                  { label: "กำไร", data: profit, backgroundColor: "#198754" }
+                ]
+              },
+              options: {
+                responsive: true,
+                scales: {
+                  y: { beginAtZero: true }
+                }
+              }
+            });
+          } catch (err) {
+            console.error("โหลดกราฟรายเดือนไม่สำเร็จ", err);
+          }
+        }
+
+        async function loadTopCars() {
+          const tbody = document.querySelector("#topCars tbody");
+          try {
+            const data = await apiFetch("/api/reports/top-cars");
+            tbody.innerHTML = "";
+            data.forEach((r, i) => {
+              tbody.innerHTML += `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td>Car #${r.carId}</td>
+                  <td>${r.deals}</td>
+                  <td>${r.revenue} บาท</td>
+                  <td>${r.profit} บาท</td>
+                </tr>`;
+            });
+          } catch (err) {
+            console.error("โหลด TopCars ไม่สำเร็จ", err);
+            tbody.innerHTML = "<tr><td colspan='5' style='color:red;'>โหลดข้อมูลไม่สำเร็จ</td></tr>";
+          }
+        }
+
+        async function loadTopCustomers() {
+          const tbody = document.querySelector("#topCustomers tbody");
+          try {
+            const data = await apiFetch("/api/reports/top-customers");
+            tbody.innerHTML = "";
+            data.forEach((r, i) => {
+              tbody.innerHTML += `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td>${r.customerName}</td>
+                  <td>${r.deals}</td>
+                  <td>${r.revenue} บาท</td>
+                  <td>${r.profit} บาท</td>
+                </tr>`;
+            });
+          } catch (err) {
+            console.error("โหลด TopCustomers ไม่สำเร็จ", err);
+            tbody.innerHTML = "<tr><td colspan='5' style='color:red;'>โหลดข้อมูลไม่สำเร็จ</td></tr>";
+          }
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+          loadOverview();
+          loadMonthlyChart();
+          loadTopCars();
+          loadTopCustomers();
+        });
+    </script>
+</head>
+
+<body>
+<header>
+    <div>📊 รายงานยอดขาย</div>
+    <a href="index.html">← กลับหน้า Dashboard</a>
+</header>
+
+<main>
+    <section class="summary">
+        <div class="card">
+            <h3>จำนวนดีล</h3>
+            <p id="totalDeals">-</p>
+        </div>
+        <div class="card">
+            <h3>รายได้รวม</h3>
+            <p id="totalRevenue">-</p>
+        </div>
+        <div class="card">
+            <h3>กำไรรวม</h3>
+            <p id="totalProfit">-</p>
+        </div>
+    </section>
+
+    <div class="card">
+        <h3>📈 กราฟรายเดือน</h3>
+        <canvas id="monthlyChart" height="100"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>🚗 รถขายดี 5 อันดับ</h3>
+        <table id="topCars">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>รถ</th>
+                <th>จำนวนดีล</th>
+                <th>รายได้</th>
+                <th>กำไร</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>👤 ลูกค้าซื้อเยอะ 5 อันดับ</h3>
+        <table id="topCustomers">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>ชื่อลูกค้า</th>
+                <th>จำนวนดีล</th>
+                <th>รายได้</th>
+                <th>กำไร</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</main>
+
+<footer>© 2025 CarBiz Management System</footer>
+</body>
+</html>
